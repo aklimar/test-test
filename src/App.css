@@ -1,0 +1,8 @@
+.App {
+  text-align: center;
+}
+.editable-cell {
+  cursor: pointer; /* Указывает, что ячейка кликабельна */
+  border: 1px solid #1890ff; /* Рамка вокруг ячейки */
+  background-color: #e6f7ff; /* Светлый фон */
+}
