@@ -29,16 +29,11 @@ const App: React.FC = () => {
     setInputValue('');
     setRecordId(parentData.id);
     setFio(parentData.fio)
-    console.log(11,parentData)
   };
 
   const handleInputChange = (e) => {
     const { value } = e.target;
-    
-    // Удаляем все символы, кроме цифр
     const numericValue = value.replace(/[^0-9]/g, '');
-  
-    // Проверяем диапазон от 0 до 100
     if (numericValue === '' || (numericValue >= 0 && numericValue <= 100)) {
       setInputValue(numericValue);
     }
@@ -46,8 +41,7 @@ const App: React.FC = () => {
 
   const handleDelete = () => {
     if (selectedMarks) {
-      // Здесь добавляем логику для удаления
-      const markKey = selectedMarks[0]?.key; // Берем ключ первого марка для удаления
+      const markKey = selectedMarks[0]?.key;
       if (markKey) {
         dispatch(deleteMark({ id: recordId, dateKey: actionType.dateKey, markKey }));
       }
@@ -66,7 +60,7 @@ const App: React.FC = () => {
 
   const handleUpdate = () => {
     if (inputValue && selectedMarks) {
-      const markKey = selectedMarks[0]?.key; // Берем ключ первого марка для изменения
+      const markKey = selectedMarks[0]?.key;
       if (markKey) {
         const newMark = { key: markKey, mark: inputValue };
         dispatch(updateMark({ id: recordId, dateKey: actionType.dateKey, newMark }));
@@ -96,7 +90,7 @@ const App: React.FC = () => {
                       icon={cellData.marks[0]?.isEdit && 
                         (<EditOutlined /> ) 
                       }
-                      onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}// Передаем id и dateKey
+                      onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
                       style={{ cursor: 'pointer' }}
                     >
                       {cellData.marks[0]?.mark}
@@ -115,7 +109,7 @@ const App: React.FC = () => {
               return (
                 <Button
                   icon={<PlusOutlined />}
-                  onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}// Передаем id и dateKey
+                  onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
                   style={{ cursor: 'pointer' }}
                 >
                   {cellData.marks[0]?.mark}
@@ -141,7 +135,7 @@ const App: React.FC = () => {
           if (cellData?.marks && cellData.marks.length > 0) {
             return (
               <div
-                onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: column.dataIndex, fio: record.fio })} // Передаем id и dateKey
+                onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: column.dataIndex, fio: record.fio })} 
                 style={{ cursor: 'pointer' }}
               >
                 {cellData.marks[0]?.mark}
@@ -151,7 +145,7 @@ const App: React.FC = () => {
 
           return (
             <div
-              onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: column.dataIndex, fio: record.fio })} // Передаем id и dateKey
+              onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: column.dataIndex, fio: record.fio })}
               style={{ cursor: 'pointer' }}
             >
               -
