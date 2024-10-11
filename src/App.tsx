@@ -1,49 +1,50 @@
-//@ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { Table, Modal, Input, Button } from 'antd';
+import { Table, Modal, Input, Button, Tooltip } from 'antd';
 import { useAppDispatch } from './hook/useAppDispatch';
 import { fetchDataSource, updateMark, deleteMark, addMark } from './slices/gradesSlice'; // Импортируйте необходимые редьюсеры
 import { useAppSelector } from './hook/useAppSelector';
-import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, ExclamationCircleOutlined, StopOutlined, QuestionOutlined } from '@ant-design/icons';
+import { IMark, IParentData, IStudent } from './types/data';
+import { ColumnGroupType, ColumnType } from 'antd/es/table';
 
 const App: React.FC = () => {
   const dispatch = useAppDispatch();
-  const data = useAppSelector(state => state.dataSource.data);
-  const columns = data?.columns || [];
+  const { data, columns } = useAppSelector(state => state.dataSource);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedMarks, setSelectedMarks] = useState(null);
-  const [inputValue, setInputValue] = useState('');
-  const [actionType, setActionType] = useState(null);
-  const [recordId, setRecordId] = useState(null);
+  const [selectedMarks, setSelectedMarks] = useState<IMark[] | boolean | null>(null);
+  const [inputValue, setInputValue] = useState<number | null>(null);
+  const [actionType, setActionType] = useState<IParentData | null>(null);
+  const [recordId, setRecordId] = useState<number | null>(null);
   const [fio, setFio] = useState('')
 
   useEffect(() => {
     dispatch(fetchDataSource());
   }, [dispatch]);
 
-  const showModal = (marks, parentData) => {
-    setSelectedMarks(marks);
+  const showModal = (parentData: IParentData) => {
+    setSelectedMarks(parentData.marks);
     setActionType(parentData);
     setIsModalVisible(true);
-    setInputValue('');
+    setInputValue(null);
     setRecordId(parentData.id);
-    setFio(parentData.fio)
+    setFio(parentData.fio);
+    console.log(123, parentData)
   };
 
-  const handleInputChange = (e) => {
-    const { value } = e.target;
-    const numericValue = value.replace(/[^0-9]/g, '');
-    if (numericValue === '' || (numericValue >= 0 && numericValue <= 100)) {
-      setInputValue(numericValue);
+
+  const handleInputChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const value = Number(e.target.value)
+    if (value >= 0 && value <= 100) {
+      setInputValue(value);
     }
   };
 
   const handleDelete = () => {
-    if (selectedMarks) {
+    if (Array.isArray(selectedMarks) && selectedMarks.length > 0) {
       const markKey = selectedMarks[0]?.key;
       if (markKey) {
-        dispatch(deleteMark({ id: recordId, dateKey: actionType.dateKey, markKey }));
+        dispatch(deleteMark({ id: recordId, dateKey: actionType?.dateKey, markKey }));
       }
       setIsModalVisible(false);
     }
@@ -53,68 +54,78 @@ const App: React.FC = () => {
   const handleAdd = () => {
     if (inputValue && recordId) {
       const newMark = inputValue
-      dispatch(addMark({ id: recordId, dateKey: actionType.dateKey, newMark }));
+      dispatch(addMark({ id: recordId, dateKey: actionType?.dateKey, newMark }));
       setIsModalVisible(false)
     }
   };
 
   const handleUpdate = () => {
-    if (inputValue && selectedMarks) {
+    if (inputValue !== null && Array.isArray(selectedMarks) && selectedMarks.length > 0) {
       const markKey = selectedMarks[0]?.key;
       if (markKey) {
         const newMark = { key: markKey, mark: inputValue };
-        dispatch(updateMark({ id: recordId, dateKey: actionType.dateKey, newMark }));
+        dispatch(updateMark({ id: recordId, dateKey: actionType?.dateKey, newMark }));
       }
       setIsModalVisible(false);
     }
   };
 
-  const renderColumns = () => {
+  const renderColumns = (): (ColumnGroupType<IStudent> | ColumnType<IStudent>)[] =>  {
     return columns.map((column) => {
       if (column.children) {
         return {
           ...column,
-          children: column.children.map((child) => ({
+          children: column.children.map((child, index) => ({
             ...child,
             align: 'center',
             width: 100,
-            render: (text, record) => {
+            title: index % 2 === 0 ? 'День' : 'Ночь',
+            render: (text:any, record: any) => {
               const cellData = record[child.dataIndex];
               if (!cellData) {
-                return (<div>н</div>)
+                return (<Tooltip title="Ученик отсутствовал">
+                  <StopOutlined />
+                </Tooltip>)
               }
-              if (cellData && cellData.marks && cellData.marks.length > 0) {
-                return (
+              if (cellData && cellData.marks) {
+                return cellData.marks[0]?.isEdit ? (
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
                     <Button
-                      icon={cellData.marks[0]?.isEdit && 
-                        (<EditOutlined /> ) 
-                      }
-                      onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
+                      icon={<EditOutlined />}
+                      onClick={() => showModal({ ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
                       style={{ cursor: 'pointer' }}
                     >
                       {cellData.marks[0]?.mark}
                     </Button>
                   </div>
-                );
-              }
-              if (cellData?.marks && !cellData?.isAdd) {
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', color: 'red' }}>
-                    <ExclamationCircleOutlined style={{ marginRight: '8px', fontSize: '16px' }} /> 
-                    Удалено 
-                  </div> 
-                );
+                ) : !cellData?.isAdd
+                  ?
+                  (
+                    <div style={{ display: 'flex', alignItems: 'center', color: 'red' }}>
+                      <ExclamationCircleOutlined style={{ marginRight: '8px', fontSize: '16px' }} />
+                      Удалено
+                    </div>
+                  )
+                  :
+                  (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                      <Button
+                        icon={<PlusOutlined />}
+                        onClick={() => showModal({ ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </div>
+                  )
               }
               return (
-                <Button
-                  icon={<PlusOutlined />}
-                  onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {cellData.marks[0]?.mark}
-                </Button>
-              );
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                  <Button
+                    icon={<PlusOutlined />}
+                    onClick={() => showModal({ ...cellData, id: record.id, dateKey: child.dataIndex, fio: record.fio })}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </div>
+              )
             },
           })),
         };
@@ -124,33 +135,31 @@ const App: React.FC = () => {
         ...column,
         align: 'center',
         minWidth: 100,
-        render: (text, record) => {
+        render: (text:any, record: any) => {
           if (column.dataIndex === 'fio' || column.dataIndex === 'number') {
             return <div>{text}</div>;
           }
           const cellData = text;
           if (!cellData) {
-            return (<div>н</div>)
+            return (<Tooltip title="Ученик отсутствовал">
+              <StopOutlined />
+            </Tooltip>)
           }
-          if (cellData?.marks && cellData.marks.length > 0) {
+          if (cellData?.marks) {
             return (
-              <div
-                onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: column.dataIndex, fio: record.fio })} 
-                style={{ cursor: 'pointer' }}
-              >
-                {cellData.marks[0]?.mark}
-              </div>
+              <Tooltip title={cellData.marks[0]?.mark}>
+                <div>
+                  {cellData.marks[0]?.mark}
+                </div>
+              </Tooltip>
             );
           }
-
-          return (
-            <div
-              onClick={() => showModal(cellData.marks, { ...cellData, id: record.id, dateKey: column.dataIndex, fio: record.fio })}
-              style={{ cursor: 'pointer' }}
-            >
-              -
-            </div>
-          );
+          else
+            return (
+              (<Tooltip title="Оценка недоступна">
+                <QuestionOutlined />
+              </Tooltip>)
+            );
         },
       };
     });
@@ -161,61 +170,62 @@ const App: React.FC = () => {
       <h1>Оценки</h1>
       <Table
         columns={renderColumns()}
-        dataSource={data.data}
+        dataSource={data}
         rowKey="id"
         pagination={false}
         size='small'
       />
 
       <Modal
-        title="Оценки"
-        visible={isModalVisible}
-        onCancel={()=>{setIsModalVisible(false)}}
+        title="Оценка"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
         footer={null}
       >
-        {selectedMarks && selectedMarks.length > 0 ? (
+        {Array.isArray(selectedMarks) && selectedMarks.length > 0 ? (
           selectedMarks.map((mark, index) => (
-            <div key={index}>{mark.mark}</div>
+            <div key={index}>Текущая оценка - {mark.mark}</div>
           ))
         ) : (
           <div>Нет оценок</div>
         )}
 
-{actionType?.marks?.[0]?.isEdit && (
-  <>
-    <div>Редактирование оценки - {fio}</div>
-    <Input
-      placeholder="Введите новую оценку"
-      value={inputValue}
-      onChange={handleInputChange}
-      style={{ marginTop: 16 }}
-    />
-    <Button type="primary" style={{ marginTop: 8 }} onClick={handleUpdate}>
-      Сохранить
-    </Button>
-  </>
-)}
+        {actionType && Array.isArray(actionType.marks) && actionType.marks.length > 0 && actionType.marks[0].isEdit && (
+          <>
+            <div>Редактирование оценки - {fio}</div>
+            <Input
+              type="number"
+              placeholder="Введите новую оценку"
+              value={inputValue||''}
+              onChange={handleInputChange}
+              style={{ marginTop: 16 }}
+            />
+            <Button type="primary" style={{ marginTop: 8 }} onClick={handleUpdate}>
+              Сохранить
+            </Button>
+          </>
+        )}
 
-{actionType?.marks?.[0]?.isDelete && (
-  <Button type="danger" onClick={handleDelete} style={{ marginTop: 16 }}>
-    Удалить
-  </Button>
-)}
+        {actionType && Array.isArray(actionType.marks) && actionType.marks.length > 0 && actionType.marks[0].isDelete && (
+          <Button onClick={handleDelete} style={{ marginTop: 16, marginLeft:10 }}>
+            Удалить
+          </Button>
+        )}
 
-{(!actionType?.marks || actionType?.marks?.length === 0) && actionType?.isAdd && (
-  <>
-    <div>Выставление оценки - {fio}</div>
-    <Input
-      placeholder="Введите оценку"
-      value={inputValue}
-      onChange={handleInputChange}
-      style={{ marginTop: 16 }}
-    />
-    <Button type="primary" style={{ marginTop: 8 }} onClick={handleAdd}>
-      Добавить
-    </Button>
-  </>
-)}
+        {(!actionType?.marks || !Array.isArray(actionType.marks) || actionType.marks.length === 0) && actionType?.isAdd && (
+          <>
+            <div>Выставление оценки - {fio}</div>
+            <Input
+              placeholder="Введите оценку"
+              value={inputValue||''}
+              onChange={handleInputChange}
+              style={{ marginTop: 16 }}
+            />
+            <Button type="primary" style={{ marginTop: 8 }} onClick={handleAdd}>
+              Добавить
+            </Button>
+          </>
+        )}
       </Modal>
     </div>
   );
